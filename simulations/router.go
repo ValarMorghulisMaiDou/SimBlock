@@ -16,6 +16,7 @@ func RegisterSimnet(g *gin.Engine) {
 	nodeGroup.POST("", createNode)
 	nodeGroup.GET("", getNodes)
 	nodeGroup.GET("/:nodeid", getNode)
+	nodeGroup.DELETE("/:nodeid", delNode)
 	nodeGroup.POST("/:nodeid/start", startNode)
 	nodeGroup.POST("/:nodeid/stop", stopNode)
 	nodeGroup.POST("/:nodeid/conn/:peerid", connectNode)

@@ -48,10 +48,12 @@ func delNetwork(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, "need network name")
 		return
 	}
-	if allNetworks[name] == nil {
+	network := allNetworks[name]
+	if network == nil {
 		c.JSON(http.StatusInternalServerError, "network doesn't exist")
 		return
 	}
+	network.Shutdown()
 	delete(allNetworks, name)
 	c.JSON(http.StatusOK, name)
 }
@@ -116,7 +118,7 @@ func createNode(c *gin.Context) {
 	config := &adapters.NodeConfig{}
 
 	// 节点的配置以json的格式保存在请求体中
-	if err := c.BindJSON(config); err != nil && err != io.EOF {
+	if err := c.ShouldBind(config); err != nil && err != io.EOF {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
@@ -139,7 +141,7 @@ func createNode(c *gin.Context) {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, node.NodeInfo())
+	c.JSON(http.StatusOK, node.NodeInfoWithConns())
 }
 func getNodes(c *gin.Context) {
 	network := parseNetwork(c)
@@ -162,6 +164,19 @@ func getNode(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, node.NodeInfoWithConns())
 }
+
+func delNode(c *gin.Context) {
+	node, network := parseNode(c)
+	if node == nil {
+		return
+	}
+	if err := network.DeleteNode(node.ID()); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
 func startNode(c *gin.Context) {
 	node, network := parseNode(c)
 	if node == nil {

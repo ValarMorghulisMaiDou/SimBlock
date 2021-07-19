@@ -46,6 +46,16 @@
           >
         </el-table-column>
         <el-table-column
+          prop="up"
+          label="状态"
+          align="center"
+          >
+          <template slot-scope="scope">
+            <el-tag v-if="scope.row.up" type="success">运行</el-tag>
+            <el-tag v-else type="danger">停止</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
           prop="nodeType"
           label="节点类型"
           align="center"
@@ -59,7 +69,9 @@
           align="center"
           >
           <template slot-scope="scope">
-            <el-button @click="delNode(scope.row.id)" type="danger" size="small">删除</el-button>
+            <el-link @click="startNode(scope.row.id)" type="success" size="small">启动</el-link>
+            <el-link @click="stopNode(scope.row.id)" type="warning" size="small">停止</el-link>
+            <el-link @click="delNode(scope.row.id)" type="danger" size="small">删除</el-link>
           </template>
         </el-table-column>
       </el-table>
@@ -109,16 +121,50 @@ export default {
     },
     newNode(){
       this.loading = true
-      axios.post("/nodes/"+this.network)
+      axios.post("/nodes/"+this.network,{
+        name:this.newNodeForm.name,
+      })
       .then(res=>{
         this.nodes.push(res.data)
+      }).catch(err=>{
+        if(err.response){
+          this.$message.error(err.response.data)
+        }else{
+          this.$message.error("unknown error")
+        }
+      }).finally(()=>{
+        this.loading = false
+      })
+    },
+    startNode(id){
+      this.loading = true
+      axios.post("/nodes/"+this.network+"/"+id+"/start")
+      .then(res=>{
+        this.getNodes()
+      }).catch(err=>{
+      }).finally(()=>{
+        this.loading = false
+      })
+    },
+    stopNode(id){
+      this.loading = true
+      axios.post("/nodes/"+this.network+"/"+id+"/stop")
+      .then(res=>{
+        this.getNodes()
       }).catch(err=>{
       }).finally(()=>{
         this.loading = false
       })
     },
     delNode(id){
-      delArrVal(this.nodes,id)
+      this.loading = true
+      axios.delete("/nodes/"+this.network+"/"+id)
+      .then(res=>{
+        this.getNodes()
+      }).catch(err=>{
+      }).finally(()=>{
+        this.loading = false
+      })
     },
     createNetworkGraph(){
       this.chart = echarts.init(this.$refs.chart);

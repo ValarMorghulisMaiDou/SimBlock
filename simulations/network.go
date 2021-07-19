@@ -159,6 +159,33 @@ func (net *Network) NewNodeWithConfig(conf *adapters.NodeConfig) (*Node, error) 
 	return node, nil
 }
 
+func (net *Network) DeleteNode(id enode.ID) error {
+	node := net.getNode(id)
+	if node == nil {
+		return errors.New("node doesn't exist")
+	}
+	if node.Up() {
+		if err := net.Stop(id); err != nil {
+			return err
+		}
+	}
+	delIndex := net.nodeMap[id]
+	// 要删除的是最后一个元素
+	if delIndex == len(net.Nodes)-1 {
+		net.Nodes = net.Nodes[:len(net.Nodes)-1]
+		delete(net.nodeMap, id)
+		return nil
+	}
+
+	// 不是最后一个元素,将最后一个元素交换到前面去
+	net.Nodes[delIndex] = net.Nodes[len(net.Nodes)-1]
+	net.Nodes = net.Nodes[:len(net.Nodes)-1]
+	newid := net.Nodes[delIndex].ID()
+	net.nodeMap[newid] = delIndex
+	delete(net.nodeMap, id)
+	return nil
+}
+
 // Config returns the network configuration
 // 获取网络的配置信息
 func (net *Network) Config() *NetworkConfig {
@@ -824,7 +851,9 @@ type Node struct {
 
 type SimNodeInfo struct {
 	*p2p.NodeInfo
-	ConnNumber int `json:"connNumber"`
+	ConnNumber int    `json:"connNumber"`
+	NodeType   string `json:"nodeType"`
+	Up         bool   `json:"up"`
 }
 
 // 创建一个Node对象,需要指定封装的adapters.Node以及它使用的配置,还有设置新建的节点是否在运行
@@ -886,7 +915,7 @@ func (n *Node) NodeInfoWithConns() *SimNodeInfo {
 	info := n.Node.NodeInfo()
 	// n.Config.Name可能被修改过,以这个为准
 	info.Name = n.Config.Name
-	newinfo := &SimNodeInfo{NodeInfo: info, ConnNumber: n.conns}
+	newinfo := &SimNodeInfo{NodeInfo: info, ConnNumber: n.conns, NodeType: "memory", Up: n.Up()}
 	return newinfo
 }
 
